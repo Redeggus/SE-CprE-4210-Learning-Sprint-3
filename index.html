@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zip Bomb Example | Algorithmic Complexity</title>
+<style>
+:root {
+--bg: #0b1020;
+--panel: #141c30;
+--panel2: #1b2740;
+--text: #eef3ff;
+--muted: #a9b6d0;
+--accent: #7ce7c5;
+--blue: #81aaff;
+--warn: #ffcc76;
+--danger: #ff7f91;
+--border: #2d3a56;
+}
+* { box-sizing: border-box; }
+body {
+margin: 0;
+font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+background: radial-gradient(ellipse at top, #192849, var(--bg) 65%);
+color: var(--text);
+line-height: 1.55;
+}
+main { max-width: 1100px; margin: auto; padding: 30px 20px 60px; }
+header { padding: 20px 0 25px; }
+.eyebrow { color: var(--accent); text-transform: uppercase; letter-spacing: 2px; font-size: .78rem; font-weight: 800; }
+h1 { font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.08; margin: 10px 0; }
+h2 { font-size: 1.25rem; margin-top: 0; }
+p { color: var(--muted); }
+header p { max-width: 720px; font-size: 1.05rem; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.panel { background: rgba(20,28,48,.94); border: 1px solid var(--border); border-radius: 16px; padding: 22px; min-width: 0; }
+.wide { grid-column: 1 / -1; }
+.control { margin: 20px 0; }
+.control-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+label { font-weight: 650; }
+output, .number { color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; accent-color: var(--accent); margin-top: 12px; cursor: pointer; }
+input[type=number] {
+width: 100%; background: #0b1325; border: 1px solid var(--border);
+color: var(--text); padding: 10px; border-radius: 9px; font: inherit;
+}
+.hint { font-size: .83rem; margin: 6px 0 0; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin: 18px 0; }
+.stat { background: #0d1528; border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+.stat small { display: block; color: var(--muted); }
+.stat strong { display: block; font-size: clamp(1.1rem, 3vw, 1.7rem); overflow-wrap: anywhere; }
+.status { padding: 13px 15px; border-radius: 10px; border: 1px solid var(--border); background: #0d1528; }
+.status.good { border-color: #347c68; }
+.status.warn { border-color: #95733c; }
+.status.danger { border-color: #9d4658; }
+button, select {
+background: var(--panel2); color: var(--text); border: 1px solid #425271;
+padding: 10px 14px; border-radius: 9px; font: inherit; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: #092018; border-color: var(--accent); font-weight: 800; }
+.actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 15px; }
+.toggle { display: flex; align-items: center; gap: 10px; margin: 15px 0; }
+.toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+.bar-row { margin: 18px 0; }
+.bar-label { display: flex; justify-content: space-between; gap: 10px; font-size: .9rem; }
+.track { height: 20px; background: #080e1b; border-radius: 6px; overflow: hidden; margin-top: 7px; border: 1px solid var(--border); }
+.bar { height: 100%; width: 0; transition: width .25s ease; border-radius: 5px; }
+.compressed { background: var(--blue); }
+.expanded { background: var(--accent); }
+.budget { background: var(--warn); }
+.chart-note { font-size: .85rem; }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+.step { border: 1px solid var(--border); border-radius: 10px; padding: 13px; background: #0d1528; }
+.step b { color: var(--accent); display: block; margin-bottom: 4px; }
+code { color: var(--accent); }
+details { border-top: 1px solid var(--border); padding: 13px 0; }
+summary { cursor: pointer; font-weight: 700; }
+.feedback { min-height: 28px; color: var(--accent); }
+footer { margin-top: 24px; color: var(--muted); font-size: .85rem; }
+@media(max-width: 700px) {
+.grid { grid-template-columns: 1fr; }
+.wide { grid-column: auto; }
+.stats { grid-template-columns: 1fr; }
+.steps { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div class="eyebrow">Algorithmic Complexity · Security Lab</div>
+<h1>Zip Bomb Example<span style="color:var(--accent)">.</span></h1>
+<p>Explore how compression can make a small input expand into a huge output—and how resource limits can prevent a decompression denial-of-service attack.</p>
+</header>
+
+<div class="grid">
+<section class="panel">
+<h2>01 / Configure the archive</h2>
+<p>Change the hypothetical archive's properties. All values are simulated; no archive is created or extracted.</p>
+<div class="control">
+<div class="control-head"><label for="size">Compressed size</label><output id="sizeOut">1 MB</output></div>
+<input id="size" type="range" min="1" max="100" step="1" value="1">
+<p class="hint">Range: 1–100 MB</p>
+</div>
+<div class="control">
+<div class="control-head"><label for="ratio">Expansion ratio</label><output id="ratioOut">100×</output></div>
+<input id="ratio" type="range" min="1" max="1000" step="1" value="100">
+<p class="hint">Expanded size ÷ compressed size. Range: 1×–1,000×.</p>
+</div>
+<div class="control">
+<div class="control-head"><label for="budget">Memory/resource budget</label><output id="budgetOut">500 MB</output></div>
+<input id="budget" type="range" min="50" max="2000" step="50" value="500">
+<p class="hint">A simplified limit for this demonstration, not a real device measurement.</p>
+</div>
+<label class="toggle"><input id="protection" type="checkbox" checked> Enable defensive size limit</label>
+<div class="actions">
+<button class="primary" id="preset">Load high-expansion example</button>
+<button id="reset">Reset</button>
+</div>
+</section>
+
+<section class="panel">
+<h2>02 / Observe the result</h2>
+<p>Compare the storage size with the amount of data the decompressor would need to produce.</p>
+<div class="stats">
+<div class="stat"><small>Compressed input</small><strong id="compressedStat">1 MB</strong></div>
+<div class="stat"><small>Expanded output</small><strong id="expandedStat">100 MB</strong></div>
+<div class="stat"><small>Expansion ratio</small><strong id="ratioStat">100×</strong></div>
+</div>
+<div class="bar-row">
+<div class="bar-label"><span>Compressed input</span><b id="compressedLabel">1 MB</b></div>
+<div class="track"><div class="bar compressed" id="compressedBar"></div></div>
+</div>
+<div class="bar-row">
+<div class="bar-label"><span>Expanded output (scaled)</span><b id="expandedLabel">100 MB</b></div>
+<div class="track"><div class="bar expanded" id="expandedBar"></div></div>
+</div>
+<div class="bar-row">
+<div class="bar-label"><span>Resource budget</span><b id="budgetLabel">500 MB</b></div>
+<div class="track"><div class="bar budget" id="budgetBar"></div></div>
+</div>
+<div id="status" class="status good" role="status" aria-live="polite">Within the simulated resource budget.</div>
+<p class="chart-note">Bars use a common scale capped at the larger of the output or budget, with a 2,000 MB maximum. They are illustrative, not a performance benchmark.</p>
+</section>
+
+<section class="panel wide">
+<h2>03 / What happens during decompression?</h2>
+<div class="steps">
+<div class="step"><b>1. Small input</b>The application receives an archive that looks inexpensive to store or upload.</div>
+<div class="step"><b>2. Expansion</b>Decompression reconstructs the original data. CPU time and memory or disk use can grow substantially.</div>
+<div class="step"><b>3. Resource exhaustion</b>If the expanded output exceeds available resources, a service may slow down, fail, or become unavailable.</div>
+</div>
+<p id="explanation">The simulated output is within the configured budget.</p>
+</section>
+
+<section class="panel">
+<h2>04 / Defense switch</h2>
+<p>Compare the same hypothetical archive with and without a resource limit. A real defense should enforce limits during processing, before output consumes excessive resources.</p>
+<div id="defenseStatus" class="status good">Protection enabled.</div>
+<ul>
+<li>Cap total decompressed bytes.</li>
+<li>Limit per-entry and total archive size.</li>
+<li>Restrict entry count, nesting, CPU time, and processing time.</li>
+<li>Reject suspicious archives and fail safely when limits are reached.</li>
+</ul>
+</section>
+
+<section class="panel">
+<h2>05 / Check your understanding</h2>
+<p>Why can a tiny compressed file still be dangerous?</p>
+<div class="control">
+<label for="quiz">Choose the best answer</label>
+<select id="quiz" style="width:100%;margin-top:8px">
+<option value="">Select an answer…</option>
+<option value="a">It always contains executable code.</option>
+<option value="b">Its decompressed output can consume excessive resources.</option>
+<option value="c">Compression makes every file larger.</option>
+<option value="d">It automatically bypasses all authentication.</option>
+</select>
+</div>
+<button class="primary" id="checkQuiz">Check answer</button>
+<p class="feedback" id="quizFeedback" aria-live="polite"></p>
+</section>
+
+<section class="panel wide">
+<h2>Key concepts</h2>
+<details>
+<summary>How is this related to algorithmic complexity?</summary>
+<p>Compression ratio describes the relationship between encoded and decoded size; it is not itself a time-complexity class. Decompression work generally depends on the amount and structure of encoded data and the algorithm. An attacker exploits the gap between the cheap-to-handle input and the potentially expensive processing or output. Runtime can also be affected by pathological formats or implementation weaknesses.</p>
+</details>
+<details>
+<summary>Is every high compression ratio a zip bomb?</summary>
+<p>No. Legitimate data can compress very well. A high ratio is a risk signal, not proof of malicious intent. Defenses should combine explicit resource limits with sensible validation rather than relying on one ratio threshold alone.</p>
+</details>
+<details>
+<summary>Why is this a denial-of-service example?</summary>
+<p>Denial of service (DoS) occurs when a system's resources are exhausted or its service becomes unavailable. Decompression bombs are a resource-exhaustion example; the demonstration does not perform an attack.</p>
+</details>
+</section>
+</div>
+
+<footer>
+Educational simulation only. No ZIP files are generated, uploaded, or decompressed. Use resource limits and safe failure handling in real systems.
+</footer>
+</main>
+
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const size = $("size"), ratio = $("ratio"), budget = $("budget"), protection = $("protection");
+
+function fmt(mb) {
+if (mb >= 1000) return (mb / 1000).toFixed(mb % 1000 === 0 ? 0 : 2) + " GB";
+return mb + " MB";
+}
+
+function update() {
+const input = Number(size.value);
+const expansion = Number(ratio.value);
+const limit = Number(budget.value);
+const output = input * expansion;
+const max = Math.max(output, limit, 100);
+const scaleMax = Math.min(2000, max);
+const barWidth = value => Math.max(1, Math.min(100, value / scaleMax * 100));
+
+$("sizeOut").textContent = fmt(input);
+$("ratioOut").textContent = expansion.toLocaleString() + "×";
+$("budgetOut").textContent = fmt(limit);
+$("compressedStat").textContent = fmt(input);
+$("expandedStat").textContent = fmt(output);
+$("ratioStat").textContent = expansion.toLocaleString() + "×";
+$("compressedLabel").textContent = fmt(input);
+$("expandedLabel").textContent = fmt(output);
+$("budgetLabel").textContent = fmt(limit);
+$("compressedBar").style.width = barWidth(input) + "%";
+$("expandedBar").style.width = barWidth(output) + "%";
+$("budgetBar").style.width = barWidth(limit) + "%";
+
+const over = output > limit;
+const status = $("status");
+status.className = "status " + (over ? (protection.checked ? "warn" : "danger") : "good");
+if (over && protection.checked) {
+status.textContent = "Limit would reject or stop processing before the simulated output exceeds the budget.";
+} else if (over) {
+status.textContent = "Resource budget exceeded in this model. Without a limit, a real system could exhaust memory or storage.";
+} else {
+status.textContent = "Within the simulated resource budget.";
+}
+
+$("explanation").textContent = over
+? "The hypothetical output is " + (output / limit).toFixed(2) +
+" times the budget. A defensive implementation should stop processing at its configured limit."
+: "The hypothetical output fits within the configured budget. This does not guarantee an archive is safe: CPU time, entry count, nesting, and other limits matter too.";
+
+$("defenseStatus").className = "status " + (protection.checked ? "good" : "warn");
+$("defenseStatus").textContent = protection.checked
+? "Protection enabled: the model would reject or stop output that exceeds the budget."
+: "Protection disabled: this model shows the full hypothetical output without a resource cap.";
+}
+
+[size, ratio, budget, protection].forEach(el => el.addEventListener("input", update));
+
+$("preset").addEventListener("click", () => {
+size.value = 2;
+ratio.value = 1000;
+budget.value = 500;
+protection.checked = true;
+update();
+});
+
+$("reset").addEventListener("click", () => {
+size.value = 1;
+ratio.value = 100;
+budget.value = 500;
+protection.checked = true;
+$("quiz").value = "";
+$("quizFeedback").textContent = "";
+update();
+});
+
+$("checkQuiz").addEventListener("click", () => {
+const answer = $("quiz").value;
+$("quizFeedback").textContent = answer === "b"
+? "Correct! A small compressed input can expand into output that overwhelms available resources."
+: answer === ""
+? "Choose an answer first."
+: "Not quite. Think about the amount of data produced when the archive is decompressed.";
+});
+
+update();
+})();
+</script>
+
+</body>
+</html>
